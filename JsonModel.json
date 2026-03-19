@@ -1,0 +1,18 @@
+{
+    "version": 1,
+    "actions": [
+        {
+            "type": "display",
+            "mode": "secondScreenOnly"
+        },
+        {
+            "type": "steam",
+            "bigPicture": true
+        },
+        {
+            "type": "launch",
+            "path": "C:\\Windows\\System32\\notepad.exe",
+            "fullscreen": false
+        }
+    ]
+}
