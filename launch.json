@@ -1,6 +1,6 @@
 {
     "action": "launch_program",
-    "exe": "E:\\SteamLibrary\\steamapps\\common\\Cyberpunk 2077\\REDprelauncher.exe",
-    "display_mode": "extend",
+    "exe": "E:\\SteamLibrary\\steamapps\\common\\Blue Prince\\BLUE PRINCE.exe",
+    "display_mode": "primary",
     "big_picture": true
 }

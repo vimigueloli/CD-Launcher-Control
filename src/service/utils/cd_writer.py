@@ -3,7 +3,7 @@ import os
 from src.service.utils.cd_drive import get_cd_drive
 
 
-def write_json_to_cd(json_path):
+def write_json_to_cd(json_path, progress_callback=None):
 
     drive = get_cd_drive()
 
@@ -13,58 +13,37 @@ def write_json_to_cd(json_path):
     json_path = os.path.abspath(json_path)
 
     ps_script = f"""
-$recorder = New-Object -ComObject IMAPI2.MsftDiscRecorder2
+$recorder = New-Object -ComObject IMAPI2.MsftDiscRecorder2 
 $master = New-Object -ComObject IMAPI2.MsftDiscMaster2
 $recorder.InitializeDiscRecorder($master.Item(0))
-
-# detectar mídia
 $writer = New-Object -ComObject IMAPI2.MsftDiscFormat2Data
-$writer.Recorder = $recorder
-$writer.ClientName = "CDLauncher"
-
-# tentar apagar disco se não estiver vazio
+$writer.Recorder = $recorder 
+$writer.ClientName = "CDLauncher" 
+$image = New-Object -ComObject IMAPI2FS.MsftFileSystemImage 
+$image.ChooseImageDefaults($recorder) 
+# --- NOVIDADE: IMPORTAR SESSÃO EXISTENTE --- 
 if ($writer.MediaHeuristicallyBlank -eq $false) {{
-
-    Write-Host "Tentando apagar disco..."
-
-    try {{
-
-        $eraser = New-Object -ComObject IMAPI2.MsftDiscFormat2Erase
-        $eraser.Recorder = $recorder
-        $eraser.ClientName = "CDLauncher"
-        $eraser.FullErase = $true
-
-        $eraser.EraseMedia()
-
-        Write-Host "Disco apagado"
-
-    }} catch {{
-
-        Write-Host "Não foi possível apagar disco (talvez seja CD-R)"
-
-    }}
+    $image.MultisessionInterfaces = $writer.MultisessionInterfaces
+    $image.ImportFileSystem() | Out-Null
 }}
-
-Write-Host "Criando nova imagem..."
-
-$image = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
-$image.ChooseImageDefaults($recorder)
-$image.FileSystemsToCreate = 4
-$image.VolumeName = "CDLAUNCHER"
-
-$stream = New-Object -ComObject ADODB.Stream
-$stream.Type = 1
-$stream.Open()
-$stream.LoadFromFile("{json_path}")
-
-$image.Root.AddFile("launch.json", $stream)
-
-$result = $image.CreateResultImage()
-
-Write-Host "Gravando disco..."
-
-$writer.Write($result.ImageStream)
-
+# Definir sistemas de arquivos (UDF/Joliet/ISO) 
+$image.FileSystemsToCreate = 7 # Recomendado usar 7 para maior compatibilidade 
+# --- NOVIDADE: SOBRESCREVER ARQUIVO --- 
+# Se o arquivo já existir no índice, removemos a referência antiga antes de adicionar a nova 
+if ($image.Root.Exists("launch.json")) {{
+    $image.Root.RemoveTree("launch.json") 
+}} # Carregar o novo JSON 
+$stream = New-Object -ComObject ADODB.Stream 
+$stream.Type = 1 
+$stream.Open() 
+$stream.LoadFromFile("{json_path}") 
+$image.Root.AddFile("launch.json", $stream) 
+# Criar a imagem de resultado 
+$result = $image.CreateResultImage() 
+# --- NOVIDADE: MANTER DISCO ABERTO --- 
+$writer.CloseMedia = $false # Permite que você grave mais vezes depois 
+Write-Host "Gravando nova sessão..." 
+$writer.Write($result.ImageStream) 
 Write-Host "Gravação concluída"
 """
 
@@ -73,17 +52,26 @@ Write-Host "Gravação concluída"
         process = subprocess.Popen(
             ["powershell", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+            stderr=subprocess.STDOUT,  # importante!
+            text=True,
+            bufsize=1
         )
 
         output = ""
 
-        for line in process.stdout:
-            print(line.strip())
-            output += line
+        # 🔥 leitura NÃO BLOQUEANTE em tempo real
+        for line in iter(process.stdout.readline, ''):
+            line = line.strip()
 
-        process.wait()
+            if line:
+                print(line)
+                output += line + "\n"
+
+                if progress_callback:
+                    progress_callback(line)
+
+        # 🔥 ESSENCIAL
+        process.communicate()
 
         if process.returncode == 0:
             return True, output

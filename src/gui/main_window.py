@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
     QLabel, QListWidget, QCheckBox, QPushButton,
     QLineEdit, QGroupBox, QRadioButton, QListWidgetItem,QMessageBox
 )
+
 from src.service.utils.cd_writer import write_json_to_cd
 from src.service.utils.windows_programs import get_installed_programs
 from PySide6.QtGui import QIcon
@@ -227,9 +228,7 @@ class MainWindow(QMainWindow):
             json.dump(data, f, indent=4)
 
         success, message = write_json_to_cd(json_path)
-
         if success:
-
             QMessageBox.information(
                 self,
                 "CD gravado",
