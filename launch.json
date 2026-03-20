@@ -1,6 +1,6 @@
 {
     "action": "launch_program",
-    "exe": "E:\\SteamLibrary\\steamapps\\common\\Blue Prince\\BLUE PRINCE.exe",
+    "exe": "E:\\SteamLibrary\\steamapps\\common\\Yu-Gi-Oh!  Master Duel\\masterduel.exe",
     "display_mode": "primary",
-    "big_picture": true
+    "big_picture": false
 }

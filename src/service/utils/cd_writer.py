@@ -45,6 +45,8 @@ $writer.CloseMedia = $false # Permite que você grave mais vezes depois
 Write-Host "Gravando nova sessão..." 
 $writer.Write($result.ImageStream) 
 Write-Host "Gravação concluída"
+Start-Sleep -Seconds 2
+$recorder.EjectMedia()
 """
 
     try:
