@@ -11,6 +11,9 @@ import os
 import json
 import threading
 
+CONFIG_DIR = os.path.join(os.getenv("APPDATA"), "CDLauncher")
+CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
+
 class WorkerSignals(QObject):
     finished = Signal(bool, str)
 
@@ -21,6 +24,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        self.load_service_state()
         self.signals = WorkerSignals()
         self.signals.finished.connect(self.finish_generate_json)
 
@@ -109,9 +113,6 @@ class MainWindow(QMainWindow):
 
         bottom_layout = QHBoxLayout()
 
-        # estado interno do serviço
-        self.service_active = False
-
         # botão ativar / desativar
         self.service_button = QPushButton()
         self.service_button.setMinimumHeight(40)
@@ -162,7 +163,23 @@ class MainWindow(QMainWindow):
 
     def toggle_service(self):
         self.service_active = not self.service_active
+        self.save_service_state()
         self.update_service_ui()
+
+    def save_service_state(self):
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump({"active": self.service_active}, f)
+
+
+    def load_service_state(self):
+        try:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                self.service_active = data.get("active", False)
+        except:
+            self.service_active = False
 
     def update_service_ui(self):
         if self.service_active:
